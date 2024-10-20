@@ -148,6 +148,11 @@ export function stringifyAst(node: Asts): string {
 			return `function '${node.text}'`
 		}
 
+		case 'LOOP': {
+			return 'loop:\n'
+				+ (node.body ? indent(stringifyAst(node.body), 1) : '(no body)')
+		}
+
 		case 'NUMBER': {
 			return `number ${node.value}`
 		}

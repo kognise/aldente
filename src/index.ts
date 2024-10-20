@@ -1,4 +1,5 @@
 import { compilePage } from './ast'
+import { resetLoop } from './debug'
 import { play, stop } from './eval'
 import { interpretBrowserKeys, updatePressedKeys } from './input'
 import { difference } from './polyfills'
@@ -6,6 +7,7 @@ import { difference } from './polyfills'
 async function main() {
 	let previousButtons: Set<string> = new Set()
 	figma.on('selectionchange', async () => {
+		resetLoop()
 		const windows = await compilePage(figma.currentPage)
 
 		const buttons = new Set(figma.currentPage.selection.map(button => button.id))

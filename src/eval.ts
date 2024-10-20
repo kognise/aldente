@@ -58,6 +58,15 @@ export interface FlowType {
 	kind: 'FLOW_TYPE'
 }
 
+export interface ArrayType {
+	kind: 'ARRAY_TYPE'
+	item: Type
+}
+
+export interface AnyType {
+	kind: 'ANY_TYPE'
+}
+
 export type Type =
 	| NumberType
 	| StringType
@@ -66,6 +75,8 @@ export type Type =
 	| EnumType
 	| GraphicType
 	| FlowType
+	| ArrayType
+	| AnyType
 
 // ---
 
@@ -118,6 +129,13 @@ export interface EnumObj {
 	at: SceneNode
 }
 
+export interface ArrayObj {
+	kind: 'ARRAY_OBJ'
+	type: ArrayType
+	items: Obj[]
+	at: SceneNode
+}
+
 export type Obj =
 	| NumberObj
 	| StringObj
@@ -126,6 +144,7 @@ export type Obj =
 	| GraphicObj
 	| TextObj
 	| FlowObj
+	| ArrayObj
 
 export type ObjOfType<T extends Type> = Extract<Obj, { type: T }>
 
@@ -137,6 +156,7 @@ const variables: Map<string, Obj> = new Map()
 interface EvalContext {
 	windowEngine: WindowEngine
 	windowNode: SectionNode
+	isDone: boolean
 }
 
 function getDataValue(data: DataAsts, ctx: EvalContext): Obj {
@@ -213,10 +233,14 @@ function getDataValue(data: DataAsts, ctx: EvalContext): Obj {
 type PickArgsInput = { name: string | null, obj: Obj }
 
 function typesEq(a: Type, b: Type): boolean {
+	if (a.kind === 'ANY_TYPE' || b.kind === 'ANY_TYPE') return true
 	if (a.kind !== b.kind) return false
 	if (a.kind === 'ENUM_TYPE' && b.kind === 'ENUM_TYPE') {
 		if (a.options.size !== b.options.size) return false
 		if (intersection(a.options, b.options).size !== a.options.size) return false
+	}
+	if (a.kind === 'ARRAY_TYPE' && b.kind === 'ARRAY_TYPE') {
+		return typesEq(a.item, b.item)
 	}
 	return true
 }
@@ -244,7 +268,7 @@ function pickArgs(required: FnArg[], inputs: PickArgsInput[], at: SceneNode): Ob
 		inputs.splice(inputIndex, 1)
 	}
 
-	for (const input of inputs) WARN('extraneous input has been ignored.', input.obj.at ?? at)
+	for (const input of inputs) WARN('extraneous input has been ignored.', input.obj.at)
 
 	// Ensure we have all arguments.
 	for (let i = 0; i < required.length; i++) {
@@ -261,20 +285,37 @@ function pickArgs(required: FnArg[], inputs: PickArgsInput[], at: SceneNode): Ob
 }
 
 async function getInstructionValue(instruction: InstructionAst, ctx: EvalContext): Promise<Obj | null> {
+	const inputs: PickArgsInput[] = instruction.inputs.map(input => {
+		return {
+			name: input.kind === 'VARIABLE' ? input.name : null,
+			obj: getDataValue(input, ctx)
+		}
+	})
+
 	switch (instruction.instruction.kind) {
+		case 'LOOP': {
+			if (!instruction.instruction.body) {
+				WARN('loop has no body.', instruction.at)
+				return null
+			}
+
+			const items = pickArgs([
+				{ type: { kind: 'ARRAY_TYPE', item: { kind: 'ANY_TYPE' } } },
+			], inputs, instruction.at)
+			const array = items[0] as ArrayObj
+
+			for (const item of array.items) {
+				await setOutputs(instruction.outputs, item, ctx)
+				await runInstructions(instruction.instruction.body, ctx)
+			}
+
+			return null
+		}
 		case 'FUNCTION': {
 			const name = instruction.instruction.text
 			if (name in builtinFnImpls) {
 				const fn = builtinFnImpls[name as BuiltinFnNames]
-
-				const inputs: PickArgsInput[] = instruction.inputs.map(input => {
-					return {
-						name: input.kind === 'VARIABLE' ? input.name : null,
-						obj: getDataValue(input, ctx)
-					}
-				})
 				const args = pickArgs(fn.args, inputs, instruction.at)
-
 				return await fn.impl(ctx, instruction.at, ...args)
 			} else {
 				return ERROR(`unknown builtin function call.`, instruction.at)
@@ -282,13 +323,6 @@ async function getInstructionValue(instruction: InstructionAst, ctx: EvalContext
 		}
 		case 'INFIX': {
 			const fn = infixOperatorImpls[instruction.instruction.operator]
-
-			const inputs: PickArgsInput[] = instruction.inputs.map(input => {
-				return {
-					name: input.kind === 'VARIABLE' ? input.name : null,
-					obj: getDataValue(input, ctx)
-				}
-			})
 
 			if (instruction.instruction.left) {
 				inputs.push({
@@ -330,6 +364,7 @@ function getObjPrimitiveValue(obj: Obj): unknown {
 		case 'NUMBER_OBJ': return obj.value
 		case 'GRAPHIC_OBJ': return obj.graphic
 		case 'STRING_OBJ': return obj.value
+		case 'ARRAY_OBJ': return obj.items.map(getObjPrimitiveValue)
 
 		case 'SPRITE_OBJ':
 		case 'TEXT_OBJ': return obj.engine
@@ -373,11 +408,12 @@ async function setOutputs(outputs: DataAsts[], value: Obj, _ctx: EvalContext): P
 	}
 }
 
-async function runFlow(flow: FlowAst, ctx: EvalContext) {
+async function runInstructions(instruction: InstructionAst | null, ctx: EvalContext) {
 	// Instructions are executed from the last item backwards.
-	const queue: InstructionAst[] = flow.first ? [ flow.first ] : []
+	const queue: InstructionAst[] = instruction ? [ instruction ] : []
 
 	for (let instruction = queue.pop(); instruction; instruction = queue.pop()) {
+		if (ctx.isDone) return
 		if (instruction.next) queue.push(instruction.next)
 
 		const value = await getInstructionValue(instruction, ctx)
@@ -394,7 +430,7 @@ async function runFlow(flow: FlowAst, ctx: EvalContext) {
 
 		if (value) {
 			await setOutputs(instruction.outputs, value, ctx)
-		} else if (instruction.outputs.length > 0) {
+		} else if (instruction.outputs.length > 0 && instruction.instruction.kind !== 'LOOP') {
 			WARN(
 				'not outputting anything because this function does not return anything.',
 				instruction.outputs[0].at ?? instruction.at
@@ -412,12 +448,13 @@ export async function play(window: WindowAst) {
 	const ctx: EvalContext = {
 		windowEngine: makeWindow(window.at),
 		windowNode: window.at,
+		isDone: false,
 	}
 
 	if (window.setup) {
 		try {
 			resetLoop()
-			await runFlow(window.setup, ctx)
+			await runInstructions(window.setup.first, ctx)
 		} catch (error) {
 			if (error instanceof EvalError) {
 				console.error('error in setup:')
@@ -434,7 +471,7 @@ export async function play(window: WindowAst) {
 	const interval = setInterval(async () => {
 		try {
 			resetLoop()
-			if (window.loop) await runFlow(window.loop, ctx)
+			if (window.loop) await runInstructions(window.loop.first, ctx)
 		} catch (error) {
 			if (error instanceof EvalError) {
 				console.error('error in loop:')
@@ -448,6 +485,7 @@ export async function play(window: WindowAst) {
 	}, 1000 / 60)
 
 	stopFunctions.set(window.at.id, () => {
+		ctx.isDone = true
 		clearInterval(interval)
 	})
 }
@@ -475,7 +513,7 @@ export interface InfixOperatorImpl {
 	impl(left: Obj, right: Obj, ctx: EvalContext, at: SceneNode): Promise<Obj>
 }
 
-export type InfixOperator = '/' | '-' | '*' | '+' | '<' | '>' | '<=' | '>='
+export type InfixOperator = '/' | '-' | '*' | '+' | '<' | '>' | '<=' | '>=' | '%'
 
 export const infixOperatorImpls: Record<InfixOperator, InfixOperatorImpl> = {
 	'/': {
@@ -486,6 +524,18 @@ export const infixOperatorImpls: Record<InfixOperator, InfixOperatorImpl> = {
 				kind: 'NUMBER_OBJ',
 				type: { kind: 'NUMBER_TYPE' },
 				value: left.value / right.value,
+				at,
+			}
+		},
+	},
+	'%': {
+		left: { type: { kind: 'NUMBER_TYPE' }, name: 'left' },
+		right: { type: { kind: 'NUMBER_TYPE' }, name: 'right' },
+		async impl(left: NumberObj, right: NumberObj, _ctx: EvalContext, at: SceneNode) {
+			return {
+				kind: 'NUMBER_OBJ',
+				type: { kind: 'NUMBER_TYPE' },
+				value: left.value % right.value,
 				at,
 			}
 		},
@@ -556,14 +606,28 @@ export const infixOperatorImpls: Record<InfixOperator, InfixOperatorImpl> = {
 	},
 }
 
-export const infixOperators: InfixOperator[] = [ '>=', '<=', '>', '<', '+', '*', '/', '-' ]
+export const infixOperators: InfixOperator[] = [ '>=', '<=', '>', '<', '+', '*', '/', '%', '-' ]
 
 export interface BuiltinFnImpl {
 	args: FnArg[]
 	impl(ctx: EvalContext, at: SceneNode, ...args: Obj[]): Promise<Obj | null>
 }
 
-export type BuiltinFnNames = 'add sprite' | 'call' | 'inputs' | 'colliding' | 'add text' | 'to string' | "parse obj"
+export type BuiltinFnNames =
+	| 'add sprite'
+	| 'add line'
+	| 'call'
+	| 'inputs'
+	| 'colliding'
+	| 'add text'
+	| 'to string'
+	| 'length'
+	| 'index'
+	| 'parse obj faces'
+	| 'parse obj vertices'
+	| 'debug log'
+	| 'range'
+	| 'yield'
 
 export const builtinFnImpls: Record<BuiltinFnNames, BuiltinFnImpl> = {
 	'add sprite': {
@@ -592,13 +656,85 @@ export const builtinFnImpls: Record<BuiltinFnNames, BuiltinFnImpl> = {
 			}
 		}
 	},
+	'add line': {
+		args: [
+			{
+				name: 'start x',
+				type: { kind: 'NUMBER_TYPE' }
+			},
+			{
+				name: 'start y',
+				type: { kind: 'NUMBER_TYPE' }
+			},
+			{
+				name: 'end x',
+				type: { kind: 'NUMBER_TYPE' }
+			},
+			{
+				name: 'end y',
+				type: { kind: 'NUMBER_TYPE' }
+			}
+		],
+		impl: async function (
+			ctx: EvalContext,
+			at: SceneNode,
+			startX: NumberObj,
+			startY: NumberObj,
+			endX: NumberObj,
+			endY: NumberObj
+		): Promise<GraphicObj> {
+			const connector = figma.createConnector()
+			connector.strokes = [ figma.util.solidPaint('#000000') ]
+			connector.strokeWeight = 1
+			connector.connectorLineType = "STRAIGHT"
+			connector.connectorStart = {
+				position: {
+					x: startX.value,
+					y: startY.value
+				}
+			}
+			connector.connectorStartStrokeCap = 'NONE'
+			connector.connectorEnd = {
+				position: {
+					x: endX.value,
+					y: endY.value
+				}
+			}
+			connector.connectorEndStrokeCap = 'NONE'
+			ctx.windowNode.appendChild(connector)
+			return {
+				kind: 'GRAPHIC_OBJ',
+				type: { kind: 'GRAPHIC_TYPE' },
+				graphic: connector,
+				at
+			}
+		}
+	},
 	'call': {
 		args: [
 			{ type: { kind: 'FLOW_TYPE' } }
 		],
 		impl: async function (ctx: EvalContext, _at: SceneNode, flow: FlowObj) {
-			await runFlow(flow.node, ctx)
+			await runInstructions(flow.node.first, ctx)
 			return null
+		}
+	},
+	'range': {
+		args: [
+			{ type: { kind: 'NUMBER_TYPE'} },
+		],
+		impl: async function (_ctx: EvalContext, at: SceneNode, max: NumberObj): Promise<ArrayObj> {
+			return {
+				kind: 'ARRAY_OBJ',
+				type: { kind: 'ARRAY_TYPE', item: { kind: 'NUMBER_TYPE' } },
+				items: new Array(max.value).fill(null as unknown as NumberObj).map((_, index) => ({
+					kind: 'NUMBER_OBJ',
+					type: { kind: 'NUMBER_TYPE' },
+					value: index,
+					at,
+				})),
+				at,
+			}
 		}
 	},
 	'inputs': {
@@ -647,18 +783,116 @@ export const builtinFnImpls: Record<BuiltinFnNames, BuiltinFnImpl> = {
 			}
 		}
 	},
-	'parse obj': {
+	'length': {
+		args: [
+			{ type: { kind: 'ARRAY_TYPE', item: { kind: 'ANY_TYPE' } } }
+		],
+		impl: async function (_ctx: EvalContext, at: SceneNode, array: ArrayObj): Promise<NumberObj> {
+			return {
+				kind: 'NUMBER_OBJ',
+				type: { kind: 'NUMBER_TYPE' },
+				value: array.items.length,
+				at,
+			}
+		}
+	},
+	'index': {
+		args: [
+			{ type: { kind: 'ARRAY_TYPE', item: { kind: 'ANY_TYPE' } } },
+			{ type: { kind: 'NUMBER_TYPE' } },
+		],
+		impl: async function (_ctx: EvalContext, at: SceneNode, array: ArrayObj, index: NumberObj): Promise<Obj> {
+			const item = array.items[index.value]
+			if (!item) ERROR(`array index out of bounds: ${index.value} >= length ${array.items.length}.`, at)
+			return item
+		}
+	},
+	'parse obj faces': {
+		args: [
+			{ type: { kind: 'STRING_TYPE' } }
+		],
+		impl: async function(_ctx: EvalContext, at: SceneNode, file: StringObj): Promise<ArrayObj> {
+			const indices: ArrayObj[] = file.value.split('\n').filter(line => /^f\s/.test(line)).map(line => {
+				line = line.slice(1).trim()
+				const coords: NumberObj[] = line.split(/\s+/g).map(index => {
+					const value = Number.parseFloat(index)
+					if (Number.isNaN(value)) ERROR(`could not parse obj: face '${index}' must is not a number.`, at)
+					return {
+						kind: 'NUMBER_OBJ',
+						type: { kind: 'NUMBER_TYPE' },
+						value: value - 1,
+						at
+					}
+				})
+
+				return {
+					kind: 'ARRAY_OBJ',
+					type: { kind: 'ARRAY_TYPE', item: { kind: 'NUMBER_TYPE' } },
+					items: coords,
+					at
+				}
+			})
+
+			console.log(`loaded ${indices.length} faces`)
+
+			return {
+				kind: 'ARRAY_OBJ',
+				type: { kind: 'ARRAY_TYPE', item: { kind: 'ARRAY_TYPE', item: { kind: 'NUMBER_TYPE' } } },
+				items: indices,
+				at
+			}
+		}
+	},
+	'parse obj vertices': {
 		args: [
 			{ type: { kind: 'STRING_TYPE' } }
 		],
 		impl: async function(_ctx: EvalContext, at: SceneNode, file: StringObj): Promise<Obj> {
+			console.log(file.value)
+			const vertices: ArrayObj[] = file.value.split('\n').filter(line => /^v\s/.test(line)).map(line => {
+				line = line.slice(1).trim()
+				const coords: NumberObj[] = line.split(/\s+/g).map(coord => {
+					const value = Number.parseFloat(coord)
+					if (Number.isNaN(value)) ERROR(`could not parse obj: vertex '${coord}' is not a number.`, at)
+					return {
+						kind: 'NUMBER_OBJ',
+						type: { kind: 'NUMBER_TYPE' },
+						value,
+						at
+					}
+				})
+				return {
+					kind: 'ARRAY_OBJ',
+					type: { kind: 'ARRAY_TYPE', item: { kind: 'NUMBER_TYPE' } },
+					items: coords,
+					at
+				}
+			})
+
+			console.log(`loaded ${vertices.length} vertices`)
 
 			return {
-				kind: 'STRING_OBJ',
-				type: { kind: 'STRING_TYPE' },
-				value: file.value,
+				kind: 'ARRAY_OBJ',
+				type: { kind: 'ARRAY_TYPE', item: { kind: 'NUMBER_TYPE' } },
+				items: vertices,
 				at
 			}
+		}
+	},
+	'debug log': {
+		args: [
+			{ type: { kind: 'ANY_TYPE' } },
+		],
+		impl: async function(_ctx: EvalContext, _at: SceneNode, value: Obj): Promise<null> {
+			console.log('debug log:', value)
+			return null
+		}
+	},
+	'yield': {
+		args: [],
+		impl: async function (): Promise<null> {
+			await new Promise(resolve => setTimeout(resolve, 1))
+			return null
 		}
 	}
 }

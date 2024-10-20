@@ -13,6 +13,7 @@ export type Asts =
 	| InfixAst
 	| VariableAst
 	| PropertyAst
+	| LoopAst
 export type AstByKind<Kind extends Asts['kind']> = Extract<Asts, { kind: Kind }>
 
 export interface WindowAst {
@@ -75,11 +76,18 @@ export interface PropertyAst {
 	at: SceneNode
 }
 
+export interface LoopAst {
+	kind: 'LOOP'
+	body: InstructionAst | null
+	at: TextNode
+}
+
 export type InstructionInnerAsts =
 	| FunctionAst
 	| NumberAst
 	| StringAst
 	| InfixAst
+	| LoopAst
 
 export interface InstructionAst {
 	kind: 'INSTRUCTION'
@@ -216,11 +224,11 @@ async function compileData(node: SceneNode, ctx: CompileContext): Promise<DataAs
 				}
 			}
 
-			if (node.shapeType === "ENG_DATABASE") {
+			if (node.shapeType === 'ENG_DATABASE') {
 				// File.
 
 				return {
-					kind: "FILE",
+					kind: 'FILE',
 					data: text,
 					at: node
 				}
@@ -247,7 +255,7 @@ function tryParseAsNumber(text: string): number | null {
 
 function tryParseAsString(text: string): string | null {
 	text = text.trim()
-	if (!/^[/“”"/].+[/“”"/]$/.test(text)) return null
+	if (!/^[/“”"/].*[/“”"/]$/.test(text)) return null
 	return text.slice(1, -1)
 }
 
@@ -289,6 +297,14 @@ async function compileInstruction(node: TextNode, ctx: CompileContext): Promise<
 	const text = node.characters.trim()
 
 	async function getInner(node: TextNode): Promise<InstructionInnerAsts> {
+		if (text === 'loop') {
+			return {
+				kind: 'LOOP',
+				body: await compileInstructions(node, ctx),
+				at: node,
+			}
+		}
+
 		const number = tryParseAsNumber(text)
 		if (number !== null) {
 			return {
@@ -330,6 +346,18 @@ async function compileInstruction(node: TextNode, ctx: CompileContext): Promise<
 	}
 
 	const instruction = await getInner(node)
+
+	if (instruction.kind === 'LOOP') {
+		return {
+			kind: 'INSTRUCTION',
+			next: null,
+			matchArms: null,
+			instruction,
+			inputs,
+			outputs,
+			at: node,
+		}
+	}
 
 	if (node.fontName === figma.mixed) WARN('mixed font detected, cannot detect italics.', node)
 
@@ -448,12 +476,12 @@ export async function compileWindow(node: SectionNode, ctx: CompileContext): Pro
 	}
 
 	const playButtons = incomingArrows.filter(node => {
-		if (node.type === "SHAPE_WITH_TEXT" && node.shapeType === "TRIANGLE_UP") return true
+		if (node.type === 'SHAPE_WITH_TEXT' && node.shapeType === 'TRIANGLE_UP') return true
 		return false
 	})
 
 	const stopButtons = incomingArrows.filter(node => {
-		if (node.type === "SHAPE_WITH_TEXT" && node.shapeType === "SQUARE") return true
+		if (node.type === 'SHAPE_WITH_TEXT' && node.shapeType === 'SQUARE') return true
 		return false
 	})
 
