@@ -1,0 +1,555 @@
+{
+	"kind": "WINDOW",
+	"playButtons": [
+		{
+			"id": "2:3503"
+		}
+	],
+	"stopButtons": [],
+	"setup": {
+		"kind": "FLOW",
+		"name": "setup",
+		"first": {
+			"kind": "INSTRUCTION",
+			"next": {
+				"kind": "INSTRUCTION",
+				"next": {
+					"kind": "INSTRUCTION",
+					"next": {
+						"kind": "INSTRUCTION",
+						"next": {
+							"kind": "INSTRUCTION",
+							"next": {
+								"kind": "INSTRUCTION",
+								"next": null,
+								"matchArms": null,
+								"instruction": {
+									"kind": "NUMBER",
+									"value": 10,
+									"at": {
+										"id": "2:2795"
+									}
+								},
+								"inputs": [],
+								"outputs": [
+									{
+										"kind": "VARIABLE",
+										"name": "x velocity",
+										"at": {
+											"id": "2:2437"
+										}
+									},
+									{
+										"kind": "VARIABLE",
+										"name": "y velocity",
+										"at": {
+											"id": "2:2445"
+										}
+									}
+								],
+								"at": {
+									"id": "2:2795"
+								}
+							},
+							"matchArms": null,
+							"instruction": {
+								"kind": "INFIX",
+								"operator": "/",
+								"left": {
+									"kind": "PROPERTY",
+									"name": "height",
+									"parent": "CURRENT_WINDOW",
+									"at": null
+								},
+								"right": {
+									"kind": "NUMBER",
+									"value": 2,
+									"at": null
+								},
+								"at": {
+									"id": "2:2347"
+								}
+							},
+							"inputs": [],
+							"outputs": [
+								{
+									"kind": "PROPERTY",
+									"name": "y pos",
+									"parent": {
+										"kind": "VARIABLE",
+										"name": "ball",
+										"at": {
+											"id": "2:2076"
+										}
+									},
+									"at": {
+										"id": "2:2569"
+									}
+								}
+							],
+							"at": {
+								"id": "2:2347"
+							}
+						},
+						"matchArms": null,
+						"instruction": {
+							"kind": "INFIX",
+							"operator": "/",
+							"left": {
+								"kind": "PROPERTY",
+								"name": "width",
+								"parent": "CURRENT_WINDOW",
+								"at": null
+							},
+							"right": {
+								"kind": "NUMBER",
+								"value": 2,
+								"at": null
+							},
+							"at": {
+								"id": "2:2268"
+							}
+						},
+						"inputs": [],
+						"outputs": [
+							{
+								"kind": "PROPERTY",
+								"name": "x pos",
+								"parent": {
+									"kind": "VARIABLE",
+									"name": "ball",
+									"at": {
+										"id": "2:2076"
+									}
+								},
+								"at": {
+									"id": "2:2536"
+								}
+							}
+						],
+						"at": {
+							"id": "2:2268"
+						}
+					},
+					"matchArms": null,
+					"instruction": {
+						"kind": "FUNCTION",
+						"text": "add sprite",
+						"at": {
+							"id": "2:2012"
+						}
+					},
+					"inputs": [
+						{
+							"kind": "GRAPHIC",
+							"at": {
+								"id": "2:248"
+							}
+						}
+					],
+					"outputs": [
+						{
+							"kind": "VARIABLE",
+							"name": "ball",
+							"at": {
+								"id": "2:2076"
+							}
+						}
+					],
+					"at": {
+						"id": "2:2012"
+					}
+				},
+				"matchArms": null,
+				"instruction": {
+					"kind": "NUMBER",
+					"value": 30,
+					"at": {
+						"id": "2:1710"
+					}
+				},
+				"inputs": [],
+				"outputs": [
+					{
+						"kind": "PROPERTY",
+						"name": "x pos",
+						"parent": {
+							"kind": "VARIABLE",
+							"name": "paddle",
+							"at": {
+								"id": "4:339"
+							}
+						},
+						"at": {
+							"id": "2:2623"
+						}
+					}
+				],
+				"at": {
+					"id": "2:1710"
+				}
+			},
+			"matchArms": null,
+			"instruction": {
+				"kind": "FUNCTION",
+				"text": "add sprite",
+				"at": {
+					"id": "2:537"
+				}
+			},
+			"inputs": [
+				{
+					"kind": "GRAPHIC",
+					"at": {
+						"id": "2:225"
+					}
+				}
+			],
+			"outputs": [
+				{
+					"kind": "VARIABLE",
+					"name": "paddle",
+					"at": {
+						"id": "4:339"
+					}
+				}
+			],
+			"at": {
+				"id": "2:537"
+			}
+		},
+		"at": {
+			"id": "2:505"
+		}
+	},
+	"loop": {
+		"kind": "FLOW",
+		"name": "loop",
+		"first": {
+			"kind": "INSTRUCTION",
+			"next": {
+				"kind": "INSTRUCTION",
+				"next": {
+					"kind": "INSTRUCTION",
+					"next": {
+						"kind": "INSTRUCTION",
+						"next": {
+							"kind": "INSTRUCTION",
+							"next": {
+								"kind": "INSTRUCTION",
+								"next": {
+									"kind": "INSTRUCTION",
+									"next": null,
+									"matchArms": null,
+									"instruction": {
+										"kind": "FUNCTION",
+										"text": "call",
+										"at": {
+											"id": "2:3040"
+										}
+									},
+									"inputs": [
+										{
+											"kind": "FLOW",
+											"name": "move ball",
+											"first": {
+												"kind": "INSTRUCTION",
+												"next": {
+													"kind": "INSTRUCTION",
+													"next": null,
+													"matchArms": null,
+													"instruction": {
+														"kind": "INFIX",
+														"operator": "+",
+														"left": null,
+														"right": null,
+														"at": {
+															"id": "2:3139"
+														}
+													},
+													"inputs": [
+														{
+															"kind": "VARIABLE",
+															"name": "y velocity",
+															"at": {
+																"id": "2:2445"
+															}
+														},
+														{
+															"kind": "PROPERTY",
+															"name": "y pos",
+															"parent": {
+																"kind": "VARIABLE",
+																"name": "ball",
+																"at": {
+																	"id": "2:2076"
+																}
+															},
+															"at": {
+																"id": "2:2569"
+															}
+														}
+													],
+													"outputs": [
+														{
+															"kind": "PROPERTY",
+															"name": "y pos",
+															"parent": {
+																"kind": "VARIABLE",
+																"name": "ball",
+																"at": {
+																	"id": "2:2076"
+																}
+															},
+															"at": {
+																"id": "2:2569"
+															}
+														}
+													],
+													"at": {
+														"id": "2:3139"
+													}
+												},
+												"matchArms": null,
+												"instruction": {
+													"kind": "INFIX",
+													"operator": "+",
+													"left": null,
+													"right": null,
+													"at": {
+														"id": "2:3136"
+													}
+												},
+												"inputs": [
+													{
+														"kind": "VARIABLE",
+														"name": "x velocity",
+														"at": {
+															"id": "2:2437"
+														}
+													},
+													{
+														"kind": "PROPERTY",
+														"name": "x pos",
+														"parent": {
+															"kind": "VARIABLE",
+															"name": "ball",
+															"at": {
+																"id": "2:2076"
+															}
+														},
+														"at": {
+															"id": "2:2536"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"kind": "PROPERTY",
+														"name": "x pos",
+														"parent": {
+															"kind": "VARIABLE",
+															"name": "ball",
+															"at": {
+																"id": "2:2076"
+															}
+														},
+														"at": {
+															"id": "2:2536"
+														}
+													}
+												],
+												"at": {
+													"id": "2:3136"
+												}
+											},
+											"at": {
+												"id": "2:3018"
+											}
+										}
+									],
+									"outputs": [],
+									"at": {
+										"id": "2:3040"
+									}
+								},
+								"matchArms": {},
+								"instruction": {
+									"kind": "INFIX",
+									"operator": "<=",
+									"left": null,
+									"right": {
+										"kind": "NUMBER",
+										"value": 0,
+										"at": null
+									},
+									"at": {
+										"id": "2:3453"
+									}
+								},
+								"inputs": [
+									{
+										"kind": "PROPERTY",
+										"name": "y pos",
+										"parent": {
+											"kind": "VARIABLE",
+											"name": "ball",
+											"at": {
+												"id": "2:2076"
+											}
+										},
+										"at": {
+											"id": "2:2569"
+										}
+									}
+								],
+								"outputs": [],
+								"at": {
+									"id": "2:3453"
+								}
+							},
+							"matchArms": {},
+							"instruction": {
+								"kind": "INFIX",
+								"operator": ">=",
+								"left": null,
+								"right": {
+									"kind": "PROPERTY",
+									"name": "height",
+									"parent": "CURRENT_WINDOW",
+									"at": null
+								},
+								"at": {
+									"id": "2:3450"
+								}
+							},
+							"inputs": [
+								{
+									"kind": "PROPERTY",
+									"name": "y pos",
+									"parent": {
+										"kind": "VARIABLE",
+										"name": "ball",
+										"at": {
+											"id": "2:2076"
+										}
+									},
+									"at": {
+										"id": "2:2569"
+									}
+								}
+							],
+							"outputs": [],
+							"at": {
+								"id": "2:3450"
+							}
+						},
+						"matchArms": {},
+						"instruction": {
+							"kind": "INFIX",
+							"operator": ">=",
+							"left": null,
+							"right": {
+								"kind": "PROPERTY",
+								"name": "width",
+								"parent": "CURRENT_WINDOW",
+								"at": null
+							},
+							"at": {
+								"id": "2:3332"
+							}
+						},
+						"inputs": [
+							{
+								"kind": "PROPERTY",
+								"name": "x pos",
+								"parent": {
+									"kind": "VARIABLE",
+									"name": "ball",
+									"at": {
+										"id": "2:2076"
+									}
+								},
+								"at": {
+									"id": "2:2536"
+								}
+							}
+						],
+						"outputs": [],
+						"at": {
+							"id": "2:3332"
+						}
+					},
+					"matchArms": {},
+					"instruction": {
+						"kind": "FUNCTION",
+						"text": "colliding",
+						"at": {
+							"id": "2:2947"
+						}
+					},
+					"inputs": [
+						{
+							"kind": "VARIABLE",
+							"name": "paddle",
+							"at": {
+								"id": "4:339"
+							}
+						},
+						{
+							"kind": "VARIABLE",
+							"name": "ball",
+							"at": {
+								"id": "2:2076"
+							}
+						}
+					],
+					"outputs": [],
+					"at": {
+						"id": "2:2947"
+					}
+				},
+				"matchArms": {},
+				"instruction": {
+					"kind": "FUNCTION",
+					"text": "inputs",
+					"at": {
+						"id": "2:1544"
+					}
+				},
+				"inputs": [],
+				"outputs": [],
+				"at": {
+					"id": "2:1544"
+				}
+			},
+			"matchArms": null,
+			"instruction": {
+				"kind": "NUMBER",
+				"value": 10,
+				"at": {
+					"id": "5:246"
+				}
+			},
+			"inputs": [],
+			"outputs": [
+				{
+					"kind": "VARIABLE",
+					"name": "right",
+					"at": {
+						"id": "5:259"
+					}
+				}
+			],
+			"at": {
+				"id": "5:246"
+			}
+		},
+		"at": {
+			"id": "2:1543"
+		}
+	},
+	"at": {
+		"id": "2:468"
+	}
+}

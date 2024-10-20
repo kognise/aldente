@@ -1,0 +1,62 @@
+<div id='container' tabindex='-1'></div>
+
+<script>
+	const container = document.getElementById('container')
+
+	function renderContainer() {
+		container.innerText = document.activeElement === container
+			? 'you can use keyboard controls'
+			: 'focus the plugin to use controls'
+	}
+
+	container.addEventListener('focus', renderContainer)
+	container.addEventListener('blur', renderContainer)
+	renderContainer()
+
+	const pressedKeys = new Set()
+
+	function updatePressedKeys() {
+		parent.postMessage({ pluginMessage: { kind: 'UPDATE_PRESSED_KEYS', pressedKeys: [ ...pressedKeys ] } }, '*')
+	}
+
+	container.addEventListener('keydown', (event) => {
+		pressedKeys.add(event.key)
+		updatePressedKeys()
+	})
+
+	container.addEventListener('keyup', (event) => {
+		pressedKeys.delete(event.key)
+		updatePressedKeys()
+	})
+</script>
+
+<style>
+	html, body {
+		margin: 0;
+		height: 100%;
+	}
+
+	#container {
+		border: 5px solid red;
+		color: red;
+		font-family: 'Comic Sans MS', sans-serif;
+		text-align: center;
+		height: 100%;
+		box-sizing: border-box;
+		outline: none;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		opacity: 0.5;
+		cursor: default;
+		user-select: none;
+	}
+
+	#container:focus {
+		border-color: green;
+		border-width: 15px;
+		color: green;
+		opacity: 1;
+	}
+</style>
