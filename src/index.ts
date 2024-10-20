@@ -13,6 +13,7 @@ async function main() {
 		const buttons = new Set(figma.currentPage.selection.map(button => button.id))
 		const newButtons = difference(buttons, previousButtons)
 		previousButtons = buttons
+		if (newButtons.size > 1) return
 
 		const playWindows = new Set(windows.filter(window => window.playButtons.some(button => newButtons.has(button.id))))
 		const stopWindows = new Set(windows.filter(window => window.stopButtons.some(button => newButtons.has(button.id))))

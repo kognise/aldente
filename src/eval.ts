@@ -285,6 +285,7 @@ function pickArgs(required: FnArg[], inputs: PickArgsInput[], at: SceneNode): Ob
 }
 
 async function getInstructionValue(instruction: InstructionAst, ctx: EvalContext): Promise<Obj | null> {
+	// console.log('is done', ctx.isDone)
 	const inputs: PickArgsInput[] = instruction.inputs.map(input => {
 		return {
 			name: input.kind === 'VARIABLE' ? input.name : null,
@@ -450,6 +451,10 @@ export async function play(window: WindowAst) {
 		windowNode: window.at,
 		isDone: false,
 	}
+
+	stopFunctions.set(window.at.id, () => {
+		ctx.isDone = true
+	})
 
 	if (window.setup) {
 		try {
