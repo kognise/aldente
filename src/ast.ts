@@ -243,8 +243,12 @@ async function compileData(node: SceneNode, ctx: CompileContext): Promise<DataAs
 
 	if (node.type === 'TEXT') return await compileFlow(node, ctx)
 
-	WARN(`could not interpret this data, it will be ignored.`, node)
-	return null
+	return {
+		kind: 'GRAPHIC',
+		at: node,
+	}
+	// WARN(`could not interpret this data, it will be ignored.`, node)
+	// return null
 }
 
 function tryParseAsNumber(text: string): number | null {

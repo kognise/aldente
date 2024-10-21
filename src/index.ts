@@ -36,15 +36,4 @@ async function main() {
 	})
 }
 
-// /**
-//  * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set/difference
-//  */
-// function setDifference<T>(superset: Set<T>, subset: Set<T>): Set<T> {
-// 	const difference: Set<T> = new Set()
-// 	for (const item of superset) {
-// 		if (!subset.has(item)) difference.add(item)
-// 	}
-// 	return difference
-// }
-
 main().catch(console.error)

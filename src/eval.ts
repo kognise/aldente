@@ -395,7 +395,7 @@ async function setOutputs(outputs: DataAsts[], value: Obj, _ctx: EvalContext): P
 				} catch (error) {
 					console.error('error setting property:')
 					console.error(error)
-					return ERROR('failed to set variable', output.at ?? value.at)
+					return ERROR('failed to set variable.', output.at ?? value.at)
 				}
 
 				return ERROR('fuck this shit.', output.at ?? value.at)
